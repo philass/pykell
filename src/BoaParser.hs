@@ -65,15 +65,15 @@ notParse = do
               spaces
               Not <$> expression
 
-operParse = do
-              spaces
-              exp1 <- expression
-              spaces
-              op <- operation
-              spaces
-              exp2 <- expression
-              return (Oper op exp1 exp2)
-
+--operParse = do
+--              spaces
+--              exp1 <- expression
+--              spaces
+--              op <- operation
+--              spaces
+--              exp2 <- expression
+--              return (Oper op exp1 exp2)
+--
 
 parenParse = do
               spaces
@@ -82,61 +82,70 @@ parenParse = do
               char '('
               return exp
 
-
-times = do
+times :: Exp -> GenParser Char st Exp
+times e = do
               spaces
               char '*'
               spaces
-              return Times
+              exp <- expression
+              return (Oper Times e exp)
 
-plus = do
+plus e = do
               spaces
               char '+'
               spaces
-              return Plus
+              exp <- expression
+              return (Oper Plus e exp)
 
-minus = do
+minus e = do
               spaces
               char '-'
               spaces
-              return Minus
-divide = do
+              exp <- expression
+              return (Oper Minus e exp)
+divide e = do
               spaces
               string "//"
               spaces
-              return Div
+              exp <- expression
+              return (Oper Div e exp)
 
 
-less = do
+less e = do
               spaces
               char '-'
               spaces
-              return Minus
-eq = do
+              exp <- expression
+              return (Oper Minus e exp)
+eq e = do
               spaces
               string "=="
               spaces
-              return Eq
+              exp <- expression
+              return (Oper Eq e exp)
 
-modu = do
+modu e = do
         spaces
         char '%'
         spaces
-        return Mod
+        exp <- expression
+        return (Oper Mod e exp)
 
-greater = do
+greater e = do
             spaces
             char '>'
             spaces
-            return Greater
+            exp <- expression
+            return (Oper Greater e exp)
 
-inOp = do
+inOp e = do
           spaces
           string "in"
           spaces
-          return In
+          exp <- expression
+          return (Oper In e exp)
 
-operation = times <|> plus <|> minus <|> divide <|> less <|> eq <|> modu <|> greater <|> inOp 
+operation e = times e <|> plus e <|> minus e <|> divide e <|> less e <|> eq e <|> modu e<|> greater e <|> inOp e
 
 --TODO
 --
@@ -172,6 +181,8 @@ stmtAssign = do
 exprToStmt = do
                 v <- expression
                 return $ SExp v
+
+
 
 -- Add OperParse back in
 --
@@ -240,9 +251,18 @@ ifclauseparse = do
 
 clausez = many1 (ifclauseparse <|> forclauseparse)
 
-expression = try parseExprValue <|> try idexprz <|> try list1 <|> try parenParse <|> try notParse <|> try ident <|> try list2 <|> try operParse
+ex = try parseExprValue <|> try idexprz <|> try list1 <|> try parenParse <|> try notParse <|> try ident <|> try list2
 
+eopt :: Exp -> GenParser Char st Exp
+eopt e = do 
+           spaces
+           return e
 
+expression = do
+               spaces
+               e <- ex
+               res <- operation e <|> eopt e
+               return res
 
 stmt :: GenParser Char st Stmt
 stmt =  try stmtAssign <|>  try exprToStmt
